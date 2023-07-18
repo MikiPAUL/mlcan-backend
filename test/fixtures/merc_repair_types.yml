@@ -1,0 +1,27 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  max_min_cost: 1
+  unit_max_cost: 1
+  hours_per_cost: 1
+  max_pieces: 1
+  units: 1
+  repair_mode: MyString
+  mode_number: 1
+  repair_code: 1
+  combined: MyString
+  description: MyString
+  id_source: 1
+
+two:
+  max_min_cost: 1
+  unit_max_cost: 1
+  hours_per_cost: 1
+  max_pieces: 1
+  units: 1
+  repair_mode: MyString
+  mode_number: 1
+  repair_code: 1
+  combined: MyString
+  description: MyString
+  id_source: 1

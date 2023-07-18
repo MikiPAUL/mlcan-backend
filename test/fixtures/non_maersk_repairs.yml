@@ -1,0 +1,35 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  hours: 1
+  material_cost: 1.5
+  container_section: MyString
+  damaged_area: MyString
+  repair_type: 1
+  description: MyString
+  comp: MyString
+  dam: MyString
+  rep: MyString
+  component: MyString
+  event: MyString
+  location: MyString
+  area: MyString
+  area2: MyString
+  id_source: 1
+
+two:
+  hours: 1
+  material_cost: 1.5
+  container_section: MyString
+  damaged_area: MyString
+  repair_type: 1
+  description: MyString
+  comp: MyString
+  dam: MyString
+  rep: MyString
+  component: MyString
+  event: MyString
+  location: MyString
+  area: MyString
+  area2: MyString
+  id_source: 1

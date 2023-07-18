@@ -1,0 +1,11 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  container_repair_area: MyString
+  container_damaged_area: MyString
+  repair_type: 1
+
+two:
+  container_repair_area: MyString
+  container_damaged_area: MyString
+  repair_type: 1

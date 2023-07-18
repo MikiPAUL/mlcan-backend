@@ -1,0 +1,27 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  email: MyString
+  owner_name: MyString
+  billing_name: MyString
+  hourly_rate: 1.5
+  gst: 1.5
+  pst: 1.5
+  city: MyString
+  address: MyString
+  province: MyString
+  postal_code: MyString
+
+two:
+  name: MyString
+  email: MyString
+  owner_name: MyString
+  billing_name: MyString
+  hourly_rate: 1.5
+  gst: 1.5
+  pst: 1.5
+  city: MyString
+  address: MyString
+  province: MyString
+  postal_code: MyString
