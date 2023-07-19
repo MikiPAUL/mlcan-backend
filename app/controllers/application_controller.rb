@@ -4,6 +4,7 @@ class ApplicationController < ActionController::API
 
   include UserConcern
   include PaginationConcern
+  include HelperConcern
   include ActionController::MimeResponds
 
   private

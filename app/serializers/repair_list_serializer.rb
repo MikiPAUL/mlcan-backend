@@ -1,5 +1,5 @@
 class RepairListSerializer < ActiveModel::Serializer
-  attributes :repair_id, :repair_area, :damaged_area, :non_maersk_hours, :non_maersk_mat_cost,
+  attributes :repair_id, :repair_number, :repair_area, :damaged_area, :non_maersk_hours, :non_maersk_mat_cost,
               :merc_hours_unit, :merc_cost_unit
 
   def repair_id 
