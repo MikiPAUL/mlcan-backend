@@ -2,26 +2,25 @@ require 'rails_helper'
 
 RSpec.describe "API::V1:Repair_lists", type: :request do
 
-    describe 'get all repair_lists' do
+    describe 'get repair_lists' do
 
-        let!(:repair_lists)  { [
-            create(:repair_list, version: 1, repair_number: 1, container_damaged_area: "version 1"),
-            create(:repair_list, version: 2, repair_number: 1, container_damaged_area: "version 2"),
-            create(:repair_list, version: 1, repair_number: 2),
-            create(:repair_list, version: 1, repair_number: 3),
-            create(:repair_list, version: 1, repair_number: 4),
-            create(:repair_list, version: 1, repair_number: 5),
-            create(:repair_list, version: 1, repair_number: 6),
-            create(:repair_list, version: 1, repair_number: 7),
-            create(:repair_list, version: 1, repair_number: 8),
-            create(:repair_list, version: 1, repair_number: 9),
-            create(:repair_list, version: 1, repair_number: 10)
-        ] }
+        let!(:repair_lists)  { [ 
+            create(:repair_list, repair_number: 1, version: 1),
+            create(:repair_list, repair_number: 1, version: 2),
+            create(:repair_list, repair_number: 2, version: 1),
+            create(:repair_list, repair_number: 3, version: 4),
+            create(:repair_list, repair_number: 4, version: 5),
+            create(:repair_list, repair_number: 1, version: 10),
+        ]}
 
-        it 'returns 30 repair lists details' do
-            get '/api/repair_lists?version=4'
+        it 'returns recently updated repair_lists below the version v' do
+            get '/api/repair_lists?version=2'
+            
+            res_data = JSON.parse(response.body)
 
-            expect(JSON.parse(response.body).length).to eq(30)
+            expect(res_data.length).to eq(2)
+            expect(res_data[0]['repair_number']).to eq(repair_lists.pluck(:repair_number)[1])
+            expect(res_data[1]['repair_number']).to eq(repair_lists.pluck(:repair_number)[2])
         end
     end
 

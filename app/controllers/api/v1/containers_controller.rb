@@ -9,6 +9,7 @@ class Api::V1::ContainersController < ApplicationController
                 container.activity.length > 0
             end
         end
+        containers = containers.order("#{params[:sort_by]} #{params[:sort_order]}")
         render json: containers, root: "containers"
     end
 
@@ -25,8 +26,8 @@ class Api::V1::ContainersController < ApplicationController
 
     def create 
         puts 
-        # @container = Container.create!(container_params)
-        container_attachments = Container.find(1).ContainerAttachment.create!(photo: params[:photos]["0"])
+        @container = Container.create!(container_params)
+        # container_attachments = Container.find(1).ContainerAttachment.create!(photo: params[:photos]["0"])
         render json: "uploaded"
     end
 

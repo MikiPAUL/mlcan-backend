@@ -23,13 +23,14 @@ class Api::V1::RepairListsController < ApplicationController
 
         subquery = @repair_lists.select("repair_number, MAX(version) AS version").group("repair_number")
 
-        latest_repair_lists = RepairList.joins(
+        @repair_lists = RepairList.joins(
         <<-SQL
             JOIN (#{subquery.to_sql}) latest_by_updates
             ON repair_lists.version = latest_by_updates.version
             AND repair_lists.repair_number = latest_by_updates.repair_number
         SQL
         )
+
         # @repair_lists =  @repair_lists.includes(RepairList.most_recent_by_updates).all
         # @repair_lists = RepairList.group(:repair_number, :id).order(:version).limit(1)
         #search

@@ -12,18 +12,34 @@ RSpec.describe "API::V1:Container", type: :request do
         end
 
         it 'returns containers sorted order based on yardname' do
-            get '/api/containers?sortby=yardname&sortorder=asc'
+            get '/api/containers?sort_by=yard_name&sort_order=asc'
 
-            is_sorted = true; prev = nil
+            is_sorted = true
 
             containers_res = JSON.parse(response.body)
-            
-            containers_res.each do |container|
-                if !prev.nil? and ((container["yard"].casecmp prev) == -1)
+
+            containers_res.each_cons(2) do |prev, current|
+                if (current['yard'].casecmp prev['yard']) == -1
                     is_sorted = false 
                     break
                 end
-                prev = container["yard"]
+            end
+
+            expect(is_sorted).to eq(true)
+        end
+
+        it 'returns containers sorted order based on yardname descending order' do
+            get '/api/containers?sort_by=yard_name&sort_order=desc'
+
+            is_sorted = true
+
+            containers_res = JSON.parse(response.body)
+
+            containers_res.each_cons(2) do |prev, current|
+                if (current['yard'].casecmp prev['yard']) == 1
+                    is_sorted = false 
+                    break
+                end
             end
 
             expect(is_sorted).to eq(true)
