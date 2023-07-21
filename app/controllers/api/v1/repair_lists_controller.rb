@@ -1,25 +1,9 @@
 class Api::V1::RepairListsController < ApplicationController
-    skip_before_action :doorkeeper_authorize!
-    before_action :repair_lists_params, only: %i[create]
-    #list all the repair list 
-    #filter, search, pagination, sort
-    #edit 
-    #delete
-    #export 
-    #versions
+    # skip_before_action :doorkeeper_authorize!
+
     def index
         #version
         @repair_lists = RepairList.where("version <= ?", get_current_version)
-        # debugger
-        # sql_query = "
-        #     SELECT repair_lists.*
-        #     FROM repair_lists JOIN (
-        #        SELECT repair_number, max(version) AS version FROM repair_lists WHERE version <= #{get_current_version} GROUP BY repair_number
-        #     ) latest_by_updates
-        #     ON repair_lists.version = latest_by_updates.version
-        #     AND repair_lists.repair_number = latest_by_updates.repair_number
-        #   "
-        #   @repair_lists = execute_statement(sql_query)
 
         subquery = @repair_lists.select("repair_number, MAX(version) AS version").group("repair_number")
 
@@ -31,10 +15,9 @@ class Api::V1::RepairListsController < ApplicationController
         SQL
         )
 
-        # @repair_lists =  @repair_lists.includes(RepairList.most_recent_by_updates).all
-        # @repair_lists = RepairList.group(:repair_number, :id).order(:version).limit(1)
         #search
-        @repair_lists = @repair_lists.where("id LIKE ?", params[:search] + "%") unless params[:search].nil?
+        @repair_lists = @repair_lists.find(params[:search]) unless params[:search].nil?
+
         #filter 
         @repair_lists = @repair_lists.where(repair_id: params[:repair_id]) unless params[:repair_id].nil?
         @repair_lists = @repair_lists.where(repair_id: params[:damaged_area]) unless params[:damaged_area].nil?
@@ -44,14 +27,9 @@ class Api::V1::RepairListsController < ApplicationController
         #pagination and sorting
         @repair_lists = @repair_lists.page(params[:page]).order("#{params[:sort_by]} #{params[:sort_order]}")
 
-        # repair_list_attr = "repair_lists.id, container_repair_area, container_damaged_area, repair_lists.repair_type"
-        # non_maersk_repairs = RepairList.select(repair_list_attr + ", hours as non_maersk_repair_hours, material_cost as non_maersk_repair_mat_cost")
-        #           .joins(:non_maersk_repair).to_a
-        # merc_repairs = RepairList.select(repair_list_attr + ", hours_per_cost as merc_hours_unit, unit_max_cost as merc_cost_unit")
-        #           .joins(:merc_repair_type).to_a
-
         @repair_lists = @repair_lists&.includes(:non_maersk_repair, :merc_repair_type)
-        render json: @repair_lists
+    
+        render json: @repair_lists, meta: pagination_meta(@repair_lists), root: 'repair_lists', adapter: :json
     end
 
 
@@ -59,19 +37,94 @@ class Api::V1::RepairListsController < ApplicationController
         @repair_list = RepairList.create(repair_lists_params)
         
         if repair_lists_params["repair_type"]  == 'non_maersk'
-           @non_maersk = @repair_list.create_non_maersk_repair!(flatten_hash(params["non_maersk_details"]))
+           @non_maersk = NonMaerskRepair.new(flatten_hash(params["non_maersk_details"]))
+           @non_maersk.repair_list_id = @repair_list.id
+           @non_maersk.save
         else
-            @merc = MercRepairType.new(flatten_hash(params["merc_details"]))
+            @merc = MercRepair.new(flatten_hash(params["merc_details"]))
+            @merc.repair_list_id = @repair_list.id
+            @merc.save
         end
-        render status: :created
-    end
+        render json: { status: "repair_list created successfully", id: @repair_list.id }, status: :created, adapter: :json
+    end 
 
     def create_version
-        Version.create!
+        if Version.create!
+            render json: { status: "Version #{Version.last.id} successfully "}
+        else
+            render json: { error: "Unable to create version" }, status: :unprocessable_entity
+        end
     end
 
     def update
-        
+        @repair_list = RepairList.find(params[:id])
+
+
+    end
+    
+    def export_xlsx
+        p = Axlsx::Package.new
+        wb = p.workbook
+
+        # Add a worksheet to the workbook
+        wb.add_worksheet(name: 'Data Sheet') do |sheet|
+          # Assume you have an array of data named 'data'
+        #   data = [
+        #     ['Name', 'Age', 'Email'],
+        #     ['John Doe', 30, 'john@example.com'],
+        #     ['Jane Smith', 25, 'jane@example.com'],
+        #     # Add more data rows as needed
+        #   ]
+          data = RepairList.includes(:non_maersk_repair, :merc_repair_type)
+          # Add the data rows to the worksheet
+          sheet.add_row(['Repair ID', 'Repair area', 'Damaged area', 'type', 'Non-Maersk hours', 
+            'Non-Maersk mat. cost', 'Merc+ hours/unit', 'Merc+ mat.cost/unit'])
+          data.each do |row|
+            
+            attr = [row.repair_number, row.container_repair_area ,row.container_damaged_area,
+                row.repair_type, row.non_maersk_repair&.hours, row.non_maersk_repair&.material_cost, 
+                row.merc_repair_type&.hours_per_cost, row.merc_repair_type&.unit_max_cost]
+
+            attr = attr.map do |att|
+                (att.blank? ? "-" : att)
+            end
+            
+            sheet.add_row(attr)
+          end
+        end
+        xlsx_data = p.to_stream.string
+        # Generate the XLSX file
+        # file_path = Rails.root.join('public', 'exported_data.xlsx')
+        # p.serialize(file_path)
+        send_data xlsx_data, filename: 'repair_lists.xlsx', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    end
+
+    def upload
+        data = []
+        file_path = Rails.root.join('public', 'repair_lists.xlsx')
+        xlsx = Roo::Spreadsheet.open(file_path, extension: :xlsx)
+
+        attr = ['Repair ID', 'Repair area', 'Damaged area', 'type', 'Non-Maersk hours', 
+            'Non-Maersk mat. cost', 'Merc+ hours/unit', 'Merc+ mat.cost/unit']
+
+        if attr != xlsx.row(1)
+            render json: {error: "upload right file with attributes"}, status: :unprocessable_entity
+        else
+            data = []
+            xlsx.each_row_streaming(offset: 1) do |row|
+                data << row.map(&:value)
+            end
+
+            RepairList.transaction do
+                data.each do |row_data|
+                    RepairList.create!(repair_number: row_data[0], container_repair_area: row_data[1],
+                    container_damaged_area: row_data[2], repair_type: row_data[3])
+                end
+            end
+
+            render json: {status: "Data uploaded successfully"}
+        end
+    
     end
 
     private
@@ -100,17 +153,5 @@ class Api::V1::RepairListsController < ApplicationController
         end
     end
 
-    # def flatten_hash(hash)
-    #     res = {}
-    #     hash.each do |key,value| 
-    #       if key == "cost_details" or key == "customer_related_details"
-    #         value.each do |val|
-    #           res[val[0].to_sym] = val[1]
-    #         end
-    #       else
-    #         res[key.to_sym] = value
-    #       end
-    #     end
-    #     return res
-    #   end
+
 end

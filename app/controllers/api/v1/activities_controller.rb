@@ -1,13 +1,12 @@
 class Api::V1::ActivitiesController < ApplicationController
-    skip_before_action :doorkeeper_authorize!
 
     def index
-        @activities = Activity.find_by(container_id: params[:id])
-        render json: @activities
+        @activities = Activity.where(container_id: params[:id])
+        render json: @activities, root: :activities
     end
 
     def create
-        @activity = Activity.new(acitivity_params)
+        @activity = Activity.new(activity_params)
 
         if @activity.save 
             render json: @activity,  status: :created
@@ -16,11 +15,15 @@ class Api::V1::ActivitiesController < ApplicationController
         end
     end
 
-    def activity_repair_lists
+    def add_repair_list
         Activity.find(params[:activity_id]).create! params[:repair_lists_id]
     end
 
-    def status
+    def get_repair_list
+        Activity
+    end
+
+    def update
         @activity = Activity.find(params[:activity_id])
         @activity.status = params[:status]
 
@@ -52,7 +55,15 @@ class Api::V1::ActivitiesController < ApplicationController
     end
 
     def show_logs
-        @comments = Activity.comments
-        render json: @comments
+        @logs = Log.joins(activity: :container).where("container_id = ?", params[:id])
+        render json: @logs
     end
+
+    private 
+
+    def create_activity_params
+        params.require()
+    end
+    
+    def 
 end

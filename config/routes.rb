@@ -17,12 +17,26 @@ Rails.application.routes.draw do
       resources :customers
       resources :users
       resources :activities
+      resources :comments
+      get '/repair_lists/download', to: 'repair_lists#export_xlsx'
+      get '/repair_lists/upload', to: 'repair_lists#upload'
+      get '/activity/:id/repair_lists', to: 'activity_repair_list#index'
+      post '/activity/:id/repair_lists', to: 'activity_repair_list#create'
+
       resources :repair_lists
       post '/auth/sign_in', to: "authentication#sign_in"
       post '/auth/password/new', to: "authentication#reset_password_token"
       put '/auth/password', to: "authentication#update_password"
       delete '/auth/sign_out', to: "authentication#sign_out"
-      get '/containers/:id/activities', to: "activity#index"
+      get '/container/:id/activities', to: "activities#index"
+      get '/container/:id/activities', to: "activities#index"
+      get '/container/:id/comments', to: "comments#index"
+      post '/container/:id/comments', to: "comments#create"
+      post '/repair_lists/versions', to: "repair_lists#create_version"
+      get '/container/:id/logs', to: "activities#show_logs"
+      get '/me', to: "users#profile"
+      post '/repair_lists/versions', to: "repair_lists#create_version"
+
        devise_for :users, controllers: {
         registrations: 'api/v1/users/registrations',
         sessions: 'api/v1/users/sessions',

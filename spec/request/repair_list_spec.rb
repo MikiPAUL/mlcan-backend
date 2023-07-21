@@ -24,4 +24,9 @@ RSpec.describe "API::V1:Repair_lists", type: :request do
         end
     end
 
+    describe 'create repair lists from the uploaded xlxs, csv file' do
+
+        
+
+    end
 end

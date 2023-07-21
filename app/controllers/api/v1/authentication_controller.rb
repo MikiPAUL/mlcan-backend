@@ -1,5 +1,5 @@
 class Api::V1::AuthenticationController < ApplicationController
-  skip_before_action :doorkeeper_authorize!, expect: %i[signout]
+  skip_before_action :doorkeeper_authorize!, expect: %i[sign_in, reset_password_by_token, update_password]
 
   def sign_in
     user = User.authenticate!(sign_in_params[:email], sign_in_params[:password])
@@ -16,7 +16,7 @@ class Api::V1::AuthenticationController < ApplicationController
     if @user.present?
       render json: { reset_password_token: @user.send_reset_password_instructions}
     else
-      render json: "No such email", status: :unauthorized
+      render json: { error: "Couldn't able to find user with email #{params[:user][:email]}"}, status: :unauthorized
     end
   end
 
@@ -26,14 +26,17 @@ class Api::V1::AuthenticationController < ApplicationController
     unless @user 
       render json: { error: "Invalid password reset token" }, status: :unprocessable_entity
     else
-      render json: @user, status: :ok
+      render json: { message: "password updated successfully" }, status: :ok
     end
   end
 
   def sign_out
     @token = Doorkeeper::AccessToken.find_by(token: request.headers['Authorization'])
-    @token.destroy if @token
-    render json: "logout successful"
+    if @token and @token.destroy 
+      render json: { message: "logout successfully"}
+    else 
+      render json: { error: "Invalid token" }
+    end
   end
 
   private

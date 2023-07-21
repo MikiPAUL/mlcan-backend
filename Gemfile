@@ -63,3 +63,5 @@ gem "aws-sdk-s3", "~> 1.128"
 gem "kaminari", "~> 1.2"
 
 gem "faker", "~> 3.2"
+
+gem "roo", "~> 2.10"

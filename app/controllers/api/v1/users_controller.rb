@@ -1,11 +1,13 @@
 class Api::V1::UsersController < ApplicationController
-    skip_before_action :doorkeeper_authorize!
 
     def index 
-        users = User.where("role = ? and is_deleted = false", (params[:role] == "admin" ? 0 : 1))
+        role = (params[:role] ? params[:role] + "s" : "users" )
+        users = User.where(is_deleted: false)
+        users = users.where("role = ?", (params[:role] == "admin" ? 0 : 1)) if params[:role]
         users = users.where("name LIKE ?", "%" + User.sanitize_sql_like(params[:search]) + "%") if params[:search]
         users = users.page(params[:page]).order("#{params[:sort_by]} #{params[:sort_order]}")
-        render json: users, root: params[:role]+"s", meta: pagination_meta(users), adapter: :json
+        
+        render json: users, root: role, meta: pagination_meta(users), adapter: :json
     end
 
     def create
@@ -18,8 +20,18 @@ class Api::V1::UsersController < ApplicationController
         end
     end
 
+    def show
+        user = User.find_by(id: params[:id], is_deleted: false)
+
+        if !user 
+            render json: { error: "Couldn't able to find the user with id #{params[:id]}"}, status: :unprocessable_entity
+        else
+            render json: user
+        end
+    end
+
     def update
-        user = User.find(update_params[:id])
+        user = User.find(params[:id])
 
         update_params.except(:id).each do |key, value|
             user[key] = value unless value.nil?
@@ -31,15 +43,19 @@ class Api::V1::UsersController < ApplicationController
         end
     end
 
+    def profile
+        render json: current_resource_owner
+    end
+
     def destroy
-        user = User.find(params[:id])
+        user = User.find_by(id: params[:id], is_deleted: false)
         
         if user
             user.is_deleted = true
             user.save
-            render json: "deleted successfully"
+            render json: { status: "user with id #{user.id} deleted successfully"}
         else
-            render json: user.errors.full_messages, status: :unprocessable_entity
+            render json: { error: "Couldn't find the user with id #{params[:id]}"}, status: :unprocessable_entity
         end
     end
 
@@ -52,8 +68,6 @@ class Api::V1::UsersController < ApplicationController
     end
 
     def update_params
-        params.require(:user).permit(:id, :name, :password, :phone_number, :email).tap do |params|
-            params.require(%i[id])
-        end
+        params.require(:user).permit(:name, :password, :phone_number, :email)
     end
 end

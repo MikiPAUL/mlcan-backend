@@ -19,19 +19,19 @@ class RepairListSerializer < ActiveModel::Serializer
   end
   
   def non_maersk_hours
-    ((@object.has_attribute? :non_maersk_repair_hours) ? @object.non_maersk_repair_hours : nil)
+    @object.non_maersk_repair&.hours
   end
     
   def non_maersk_mat_cost
-    ((@object.has_attribute? :non_maersk_repair_mat_cost) ? @object.non_maersk_repair_mat_cost : nil)
+    @object.non_maersk_repair&.material_cost
   end
 
   def merc_hours_unit
-    ((@object.has_attribute? :merc_hours_unit) ? @object.merc_hours_unit : nil)
+    @object.merc_repair_type&.hours_per_cost
   end
     
   def merc_cost_unit
-    ((@object.has_attribute? :merc_cost_unit) ? @object.merc_cost_unit : nil)
+    @object.merc_repair_type&.unit_max_cost
   end
 
 end

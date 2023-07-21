@@ -1,5 +1,5 @@
-class UserSerializer < ActiveModel::Serializer
-  attributes :id, :name, :email, :phone_number, :status, :role
+class UserCommentSerializer < ActiveModel::Serializer
+  attributes :id, :name, :role
 
   def id
     customer_id = object.id
@@ -7,4 +7,3 @@ class UserSerializer < ActiveModel::Serializer
     "A" + ("0" * len) + object.id.to_s
   end
 end
-

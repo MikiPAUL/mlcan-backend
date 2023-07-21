@@ -1,66 +1,53 @@
-require 'axlsx'
-
 class Api::V1::CustomersController < ApplicationController
-    skip_before_action :doorkeeper_authorize!
-    # include ActionView::Rendering
+    before_action :customer_params, only: %i[create update]
 
     def index 
         @customers = Customer.all
         @customers = @customers.where("name LIKE ?", "%" + Customer.sanitize_sql_like(params[:search]) + "%") if params[:search]
         @customers = @customers.page(params[:page]).order("#{params[:sort_by]} #{params[:sort_order]}")
-        respond_to do |format|
-            format.json { (render json: @customers, meta: pagination_meta(@customers), adapter: :json) }
-            format.xlsx {
-              response.headers['Content-Disposition'] = 'attachment; filename="all_customers.xlsx"'
-            }
-         end
-        # Axlsx::Package.new do |p|
-        #     p.workbook.add_worksheet(name: "Users") do |sheet|
-        #       @customers.each do |user|
-        #         # sheet.add_row ["name", "email"]
-        #         # debugger
-        #         # sheet.add_row [user[:name], user[:email]], types: %i[string string]
-        #       end
-        #     end
-        #     send_data Base64.encode64(p.to_stream.read), filename: "users.csv", type: "text/csv", handlers: [:axlsx], formats: [:xlsx]
-        # end    
+
+        render json: @customers, root: 'customers', meta: pagination_meta(@customers), adapter: :json
     end
 
     def create 
-      @customer = Customer.new(flatten_hash customer_create_params)
+      @customer = Customer.new(flatten_hash customer_params)
       if !@customer.nil? and @customer.save
-        render json: { customer_id: @customer.id }, status: :created, formats: [:json]
+        render json: { customer_id: @customer.id, status: "Customer created successfully" }, status: :created, formats: [:json]
       else 
         render status: :unprocessable_entity
       end
     end
 
-    def 
+    def show
+      @customer = Customer.find(params[:id])
 
-    def list_repair 
-      redirect_to controller: :repair_list, action: :index
+      if @customer
+        render json: @customer, root: "customer", adapter: :json
+      else
+        render json: "Couldn't able to find user with id #{params[:id]}", status: :unprocessable_entity
+      end
+    end
+
+    def update 
+      @customer = Customer.find(params[:id])
+
+      if @customer.nil?
+        render json: "Couldn't able to find user with id #{params[:id]}", status: :unprocessable_entity
+      else
+        if @customer.update(flatten_hash customer_params)
+          render json: @customer, status: :ok
+        else
+          render json: @customer.errors.full_messages, status: :unprocessable_entity
+        end
+      end
     end
 
     private 
 
-    def customer_create_params
+    def customer_params
+
       params.require(:customer).permit(:name, :email, :password, :owner_name, 
         :billing_name, :hourly_rate,{ :tax => [:gst, :pst]}, 
         { :location => [:city, :address, :province, :postal_code] },  :repair_list, :status)
     end
-
-    def flatten_hash(hash)
-      res = {}
-      hash.each do |key,value| 
-        if key == "tax" or key == "location"
-          value.each do |val|
-            res[val[0].to_sym] = val[1]
-          end
-        else
-          res[key.to_sym] = value
-        end
-      end
-      return res
-    end
-    
 end

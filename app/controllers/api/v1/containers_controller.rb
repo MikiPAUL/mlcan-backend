@@ -1,5 +1,4 @@
 class Api::V1::ContainersController < ApplicationController
-    skip_before_action :doorkeeper_authorize!
 
     def index 
         containers = Container.all
@@ -10,13 +9,23 @@ class Api::V1::ContainersController < ApplicationController
             end
         end
         containers = containers.order("#{params[:sort_by]} #{params[:sort_order]}")
-        render json: containers, root: "containers"
+        render json: containers, root: 'containers', each_serializer: ContainerSerializer, adapter: :json
     end
 
     def update 
-        container = Container.find(params[:container_id])
+        container = Container.find(params[:id])
+
+        req_param =  flatten_hash container_params
         
-        container.update()
+        req_param.each do |key, value|
+            container[key] = value
+        end
+        
+        if container.save
+            render json: container
+        else
+            render json: container.errors.full_messages, status: :unprocessable_entity
+        end
     end
 
     def show
@@ -25,10 +34,13 @@ class Api::V1::ContainersController < ApplicationController
     end
 
     def create 
-        puts 
-        @container = Container.create!(container_params)
+        @container = Container.create!(flatten_hash container_params)
         # container_attachments = Container.find(1).ContainerAttachment.create!(photo: params[:photos]["0"])
-        render json: "uploaded"
+        if !@container
+            render json: @container.errors.full_messages, status: :unprocessable_entity
+        else
+            render json: {status: "Successfully created container with id #{@container.id}"}
+        end
     end
 
     def show_activity
@@ -36,7 +48,7 @@ class Api::V1::ContainersController < ApplicationController
         render json: @activities
     end
 
-    def show_comment
+    def show_comments
         @comments = Container.find(params[:id]).comments
         render json: @comments
     end
@@ -73,6 +85,8 @@ class Api::V1::ContainersController < ApplicationController
     end
     
     def container_params
-        params.permit(:yard_name, :customer)
+        params.require(:container).permit(container_details: [:container_number, :container_length, :container_height,
+        :container_manufacture_year, :container_type, :location], customer_details: [:yard_name, :customer_name, :container_owner_name, 
+        :submitter_initials, :customer_id])
     end
 end

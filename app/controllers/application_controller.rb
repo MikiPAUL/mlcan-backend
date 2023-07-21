@@ -7,6 +7,14 @@ class ApplicationController < ActionController::API
   include HelperConcern
   include ActionController::MimeResponds
 
+  rescue_from ActiveRecord::RecordNotFound do |exception|
+      render json: { error: exception }
+  end
+
+  rescue_from ActiveRecord::RecordInvalid do |exception|
+      render json: { error: exception }
+  end
+
   private
   # Doorkeeper methods
   def current_resource_owner
