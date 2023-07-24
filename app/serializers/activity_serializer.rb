@@ -1,5 +1,5 @@
 class ActivitySerializer < ActiveModel::Serializer
-  attributes :activity_id, :activity, :activity_date
+  attributes :activity_id, :activity, :activity_date, :activity_status
 
   def activity_id
     object.id
@@ -11,5 +11,9 @@ class ActivitySerializer < ActiveModel::Serializer
 
   def activity_date
     object.created_at.to_date
+  end
+
+  def activity_status
+    object.status
   end
 end

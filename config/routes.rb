@@ -29,7 +29,7 @@ Rails.application.routes.draw do
       put '/auth/password', to: "authentication#update_password"
       delete '/auth/sign_out', to: "authentication#sign_out"
       get '/container/:id/activities', to: "activities#index"
-      get '/container/:id/activities', to: "activities#index"
+      post '/container/:id/activities', to: "activities#create"
       get '/container/:id/comments', to: "comments#index"
       post '/container/:id/comments', to: "comments#create"
       post '/repair_lists/versions', to: "repair_lists#create_version"

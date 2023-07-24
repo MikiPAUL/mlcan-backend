@@ -23,10 +23,4 @@ RSpec.describe "API::V1:Repair_lists", type: :request do
             expect(res_data[1]['repair_number']).to eq(repair_lists.pluck(:repair_number)[2])
         end
     end
-
-    describe 'create repair lists from the uploaded xlxs, csv file' do
-
-        
-
-    end
 end

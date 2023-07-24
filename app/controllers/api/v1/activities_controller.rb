@@ -15,25 +15,6 @@ class Api::V1::ActivitiesController < ApplicationController
         end
     end
 
-    def add_repair_list
-        Activity.find(params[:activity_id]).create! params[:repair_lists_id]
-    end
-
-    def get_repair_list
-        Activity
-    end
-
-    def update
-        @activity = Activity.find(params[:activity_id])
-        @activity.status = params[:status]
-
-        if @activity.save
-            render json: @activity, status: :success 
-        else
-            render status: :unprocessable_entity
-        end
-    end
-
     def show
         @activity = ActivityRepairList.find_by(activity_id: params[:id])
         render json: @activity
@@ -48,7 +29,7 @@ class Api::V1::ActivitiesController < ApplicationController
         end
         if @activity.save and @activity.status != old_status_
             log = @activity.logs.create!(old_status: old_status_, new_status: @activity.status)
-            render json: log, status: :ok
+            render json: log, status: :ok, each_serializer: LogSerializer
         else
             render json: {error: "unable to update activity details"}, status: :unprocessable_entity
         end
@@ -65,5 +46,4 @@ class Api::V1::ActivitiesController < ApplicationController
         params.require()
     end
     
-    def 
 end
