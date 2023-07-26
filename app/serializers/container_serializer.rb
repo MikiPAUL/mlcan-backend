@@ -1,9 +1,9 @@
 class ContainerSerializer < ActiveModel::Serializer
   has_many :activity
-  attributes :container_number, :yard, :customer, :owner_name
+  attributes :id, :container_number, :yard, :customer, :owner_name
 
   def container_number
-    object.id
+    object.container_number
   end
 
   def yard

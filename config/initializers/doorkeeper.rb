@@ -20,7 +20,7 @@ Doorkeeper.configure do
 
   access_token_methods :from_bearer_authorization, :from_access_token_param, :from_bearer_param
 
-  access_token_expires_in 1.hour
+  access_token_expires_in 2.hour
 
   # If you didn't skip applications controller from Doorkeeper routes in your application routes.rb
   # file then you need to declare this block in order to restrict access to the web interface for

@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe "API::V1::Authentication", type: :request do
 
-    describe 'post /sign_in' do
+    describe 'post /api/sign_in' do
 
         let!(:user) { create(:user) }
 
@@ -24,17 +24,23 @@ RSpec.describe "API::V1::Authentication", type: :request do
 
     end
 
-    describe 'post /password/new.json' do
+    describe 'post /api/auth/password/new' do
 
         let!(:user) { create(:user) }
-        let!(:password_token) { reset_token user }
-         
-        it 'returns 401 - invalid email' do
-            expect(password_token.nil?).to eq(false)
+        
+        it 'returns 200 - generate reset password token' do
+            reset_password_params = {
+                user: {
+                    email: user.email
+                }
+            }
+            post '/api/auth/password/new', params: reset_password_params
+            
+            expect(JSON.parse(response.body)["reset_password_token"].present?).to eq(true)
         end
     end
 
-    describe 'put /auth/password' do
+    describe 'put /api/auth/password' do
         
         let!(:user)  { create(:user) }           
         let!(:password_token) { reset_token user }
@@ -50,7 +56,7 @@ RSpec.describe "API::V1::Authentication", type: :request do
         end
 
         it 'successfully updated password' do
-            puts password_token["reset_password_token"]
+            
             put '/api/auth/password', params: @password_update_params
             expect(response.status).to eq(200)
         end

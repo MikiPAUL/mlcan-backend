@@ -1,5 +1,6 @@
 class Api::V1::RepairListsController < ApplicationController
     # skip_before_action :doorkeeper_authorize!
+    before_action :add_version, only: [:create]
 
     def index
         #version
@@ -9,20 +10,20 @@ class Api::V1::RepairListsController < ApplicationController
 
         @repair_lists = RepairList.joins(
         <<-SQL
-            JOIN (#{subquery.to_sql}) latest_by_updates
+            INNER JOIN (#{subquery.to_sql}) latest_by_updates
             ON repair_lists.version = latest_by_updates.version
             AND repair_lists.repair_number = latest_by_updates.repair_number
         SQL
         )
 
         #search
-        @repair_lists = @repair_lists.find(params[:search]) unless params[:search].nil?
+        @repair_lists = @repair_lists.where("repair_lists.repair_number LIKE ?", "%" + params[:search].downcase + "%") unless params[:search].nil?
 
         #filter 
         @repair_lists = @repair_lists.where(repair_id: params[:repair_id]) unless params[:repair_id].nil?
-        @repair_lists = @repair_lists.where(repair_id: params[:damaged_area]) unless params[:damaged_area].nil?
-        @repair_lists = @repair_lists.where(repair_id: params[:type]) unless params[:type].nil?
-        @repair_lists = @repair_lists.where(repair_id: params[:repair_type]) unless params[:repair_type].nil?
+        @repair_lists = @repair_lists.where(container_damaged_area: params[:damaged_area]) unless params[:damaged_area].nil?
+        @repair_lists = @repair_lists.where(container_repair_area: params[:repair_area]) unless params[:damaged_area].nil?
+        @repair_lists = @repair_lists.where(repair_type: params[:type]) unless params[:type].nil?
 
         #pagination and sorting
         @repair_lists = @repair_lists.page(params[:page]).order("#{params[:sort_by]} #{params[:sort_order]}")
@@ -34,19 +35,28 @@ class Api::V1::RepairListsController < ApplicationController
 
 
     def create 
-        @repair_list = RepairList.create(repair_lists_params)
+        @repair_list = RepairList.new(repair_lists_params["repair_details"])
         
-        if repair_lists_params["repair_type"]  == 'non_maersk'
-           @non_maersk = NonMaerskRepair.new(flatten_hash(params["non_maersk_details"]))
-           @non_maersk.repair_list_id = @repair_list.id
-           @non_maersk.save
-        else
-            @merc = MercRepair.new(flatten_hash(params["merc_details"]))
-            @merc.repair_list_id = @repair_list.id
-            @merc.save
+        ActiveRecord::Base.transaction do
+            @repair_list.save!
+            if @repair_list.repair_type == 'non_maersk'
+                @non_maersk = NonMaerskRepair.new(flatten_hash(repair_lists_params["non_maersk_details"]))
+                @non_maersk.repair_list_id = @repair_list.id
+                @non_maersk.save
+            else
+                @merc = MercRepairType.new(flatten_hash(repair_lists_params["merc_details"]))
+                @merc.repair_list_id = @repair_list.id
+                @merc.save
+            end
         end
         render json: { status: "repair_list created successfully", id: @repair_list.id }, status: :created, adapter: :json
     end 
+
+    def show
+        @repair_list = RepairList.find(params[:id])
+
+        render json: @repair_list
+    end
 
     def create_version
         if Version.create!
@@ -58,25 +68,37 @@ class Api::V1::RepairListsController < ApplicationController
 
     def update
         @repair_list = RepairList.find(params[:id])
+        
+        if !(@repair_list.version.eql? get_current_version)
+            return render json: { error: "Couldn't update the previous versions" }, status: :unprocessable_entity, as: :json
+        end
 
+        @repair_list.update(flatten_hash repair_lists_params[:repair_details])
 
+        ActiveRecord::Base.transaction do 
+            @repair_list.save!
+            if @repair_list.merc? and repair_lists_params[:merc_details].present?
+
+                merc_details = @repair_list.merc_repair_type
+                merc_details.update!(flatten_hash(repair_lists_params["merc_details"]))
+
+            elsif @repair_list.non_maersk? and repair_lists_params[:non_maersk_details].present?
+                
+                non_maersk_details = @repair_list.non_maersk_repair
+                non_maersk_details.update!(flatten_hash(repair_lists_params["non_maersk_details"]))
+            end
+        end
+        render json: @repair_list
     end
     
     def export_xlsx
         p = Axlsx::Package.new
         wb = p.workbook
 
-        # Add a worksheet to the workbook
         wb.add_worksheet(name: 'Data Sheet') do |sheet|
-          # Assume you have an array of data named 'data'
-        #   data = [
-        #     ['Name', 'Age', 'Email'],
-        #     ['John Doe', 30, 'john@example.com'],
-        #     ['Jane Smith', 25, 'jane@example.com'],
-        #     # Add more data rows as needed
-        #   ]
+        
           data = RepairList.includes(:non_maersk_repair, :merc_repair_type)
-          # Add the data rows to the worksheet
+
           sheet.add_row(['Repair ID', 'Repair area', 'Damaged area', 'type', 'Non-Maersk hours', 
             'Non-Maersk mat. cost', 'Merc+ hours/unit', 'Merc+ mat.cost/unit'])
           data.each do |row|
@@ -93,9 +115,7 @@ class Api::V1::RepairListsController < ApplicationController
           end
         end
         xlsx_data = p.to_stream.string
-        # Generate the XLSX file
-        # file_path = Rails.root.join('public', 'exported_data.xlsx')
-        # p.serialize(file_path)
+
         send_data xlsx_data, filename: 'repair_lists.xlsx', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     end
 
@@ -129,29 +149,26 @@ class Api::V1::RepairListsController < ApplicationController
 
     private
 
+    def add_version
+        params["repair_list"]["repair_details"]["version"] = get_current_version
+    end
+
     def repair_lists_params
-        params["repair_details"]["version"] = get_current_version
-        params.require(:repair_details)
-        .permit(:repair_number, :container_repair_area, :container_damaged_area, :repair_type, :version,
-            :component , :event , :location , :id_source , :area , :area2, 
-        non_maersk_details: [ cost_details: [ :hours, :material_cost ] , customer_related_details:
-         [:container_section , :damaged_area , :repair_type , :description, condition: [:comp, :dam, :rep]]])
+        params.require(:repair_list)
+        .permit(repair_details: [:repair_number, :container_repair_area, :container_damaged_area, :repair_type, :version],
+            non_maersk_details: [ cost_details: [ :hours, :material_cost ] , customer_related_details:
+            [:component , :event , :location , :id_source , :area , :area2, :container_section , :damaged_area , :repair_type , :description, condition: [:comp, :dam, :rep]]],
+           merc_details: [ cost_details: [ :max_min_cost, :unit_max_cost, :hours_per_cost, :max_pieces, :units], 
+           customer_related_details: [ :repair_mode, :mode_number, :repair_code, :combined, :description, :id_source]])
+        # params.require(:repair_details)
+        # .permit(:repair_number, :container_repair_area, :container_damaged_area, :repair_type, :version,
+        #     :component , :event , :location , :id_source , :area , :area2, 
+        # non_maersk_details: [ cost_details: [ :hours, :material_cost ] , customer_related_details:
+        #  [:container_section , :damaged_area , :repair_type , :description, condition: [:comp, :dam, :rep]]])
     end
 
     def get_current_version
         params[:version] || Version.last&.id || 1
     end
-
-    def execute_statement(sql)
-        # results = ActiveRecord::Base.connection.exec_query(sql)
-        results = RepairList.find_by_sql([sql])
-
-        if results.present?
-            return results
-        else
-            return nil
-        end
-    end
-
-
+    
 end

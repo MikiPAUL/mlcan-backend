@@ -1,17 +1,16 @@
 class Api::V1::CustomersController < ApplicationController
-    before_action :customer_params, only: %i[create update]
 
     def index 
         @customers = Customer.all
-        @customers = @customers.where("name LIKE ?", "%" + Customer.sanitize_sql_like(params[:search]) + "%") if params[:search]
-        @customers = @customers.page(params[:page]).order("#{params[:sort_by]} #{params[:sort_order]}")
+        @customers = @customers&.where("name LIKE ?", "%" + Customer.sanitize_sql_like(params[:search]) + "%") if params[:search]
+        @customers = @customers&.page(params[:page]).order("#{params[:sort_by]} #{params[:sort_order]}")
 
         render json: @customers, root: 'customers', meta: pagination_meta(@customers), adapter: :json
     end
 
     def create 
       @customer = Customer.new(flatten_hash customer_params)
-      if !@customer.nil? and @customer.save
+      if @customer&.save
         render json: { customer_id: @customer.id, status: "Customer created successfully" }, status: :created, formats: [:json]
       else 
         render status: :unprocessable_entity

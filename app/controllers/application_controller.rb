@@ -8,11 +8,11 @@ class ApplicationController < ActionController::API
   include ActionController::MimeResponds
 
   rescue_from ActiveRecord::RecordNotFound do |exception|
-      render json: { error: exception }
+      render json: { error: exception }, status: :unprocessable_entity
   end
 
   rescue_from ActiveRecord::RecordInvalid do |exception|
-      render json: { error: exception }
+      render json: { error: exception }, status: :unprocessable_entity
   end
 
   private

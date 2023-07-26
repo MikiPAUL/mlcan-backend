@@ -7,17 +7,47 @@ class Api::V1::ActivityRepairListController < ApplicationController
     end
 
     def create 
-        ActivityRepairList.transaction do
-            create_activity_repair_list_params[:repair_lists].each do |repair_id|
-                ActivityRepairList.create! repair_list_id: repair_id, activity_id: params[:id]
-            end
+        ActiveRecord::Base.transaction do 
+            activity_repair_list = ActivityRepairList.create!(repair_list_id: params[:repair_id],
+                 activity_id: params[:id], comments: params[:comments])
+                 
+            activity_repair_list.repair_list_attachments.create!(
+                photo_type: :damaged_area, photo: params[:damaged_area]
+            )
+            activity_repair_list.repair_list_attachments.create!(
+                photo_type: :damaged_area, photo: params[:repair_area]
+            )
+            render json: { status: "Repair added successfully", id: activity_repair_list.id}
         end
-        render json: { status: "Repair added successfully"}
+    end
+
+    def update 
+        
+        ActiveRecord::Base.transaction do 
+            activity_repair_list = ActivityRepairList.find(params[:id])
+            activity_repair_list.update!(update_params)
+
+            activity_repair_list.repair_list_attachments.update(
+                flatten_hash create_params[:photo]
+            )
+        end
+        render json: repair_list, status: :ok
+    end 
+
+    def show
+        repair_list = ActivityRepairList.find(params[:id])
+
+        render json: repair_list
     end
 
     private 
 
-    def create_activity_repair_list_params
-        params.require(:activity_repair_lists).permit(repair_lists: [])
+    def create_params
+        params.permit(:repair_id, :comments, :damaged_area, :repaired_area, :id)
+    end
+
+    def update_params
+        params.require(:activity_repair_list).permit(:repair_id, :comments,
+        photo: [:damaged_area, :repaired_area])
     end
 end

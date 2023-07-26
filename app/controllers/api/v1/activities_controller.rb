@@ -1,8 +1,8 @@
 class Api::V1::ActivitiesController < ApplicationController
 
     def index
-        @activities = Activity.where(container_id: params[:id])
-        render json: @activities, root: :activities
+        @activities = Container.find(params[:id]).activity
+        render json: @activities
     end
 
     def create
@@ -33,11 +33,6 @@ class Api::V1::ActivitiesController < ApplicationController
         else
             render json: {error: "unable to update activity details"}, status: :unprocessable_entity
         end
-    end
-
-    def show_logs
-        @logs = Log.joins(activity: :container).where("container_id = ?", params[:id])
-        render json: @logs
     end
 
     private 

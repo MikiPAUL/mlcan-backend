@@ -10,6 +10,6 @@ FactoryBot.define do
         container_type  { Faker::Name.name }
         container_manufacture_year { Faker::Vehicle.year }
         location { Faker::Games::WarhammerFantasy.location }
-        customer
+        association :customer
     end
 end

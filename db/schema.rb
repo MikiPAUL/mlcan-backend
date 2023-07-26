@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_18_190948) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_24_180944) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -59,6 +59,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_190948) do
     t.bigint "repair_list_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "comments"
     t.index ["activity_id"], name: "index_activity_repair_lists_on_activity_id"
     t.index ["repair_list_id"], name: "index_activity_repair_lists_on_repair_list_id"
   end
@@ -83,7 +84,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_190948) do
 
   create_table "containers", force: :cascade do |t|
     t.string "yard_name"
-    t.integer "container_number"
+    t.string "container_number"
     t.string "customer_name"
     t.string "container_owner_name"
     t.string "submitter_initials"
@@ -140,7 +141,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_190948) do
     t.bigint "repair_list_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["repair_list_id"], name: "index_merc_repair_types_on_repair_list_id"
+    t.index ["repair_list_id"], name: "index_merc_repairs_on_container_id"
   end
 
   create_table "non_maersk_repairs", force: :cascade do |t|
@@ -179,6 +180,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_190948) do
     t.index ["token"], name: "index_oauth_access_tokens_on_token", unique: true
   end
 
+  create_table "repair_list_attachments", force: :cascade do |t|
+    t.bigint "activity_repair_list_id", null: false
+    t.integer "photo_type", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["activity_repair_list_id"], name: "index_repair_list_attachments_on_activity_repair_list_id"
+  end
+
   create_table "repair_lists", force: :cascade do |t|
     t.string "container_repair_area"
     t.string "container_damaged_area"
@@ -186,7 +195,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_190948) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "version"
-    t.integer "repair_number"
+    t.string "repair_number"
   end
 
   create_table "users", force: :cascade do |t|
@@ -224,4 +233,5 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_190948) do
   add_foreign_key "merc_repair_types", "repair_lists"
   add_foreign_key "non_maersk_repairs", "repair_lists"
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
+  add_foreign_key "repair_list_attachments", "activity_repair_lists"
 end

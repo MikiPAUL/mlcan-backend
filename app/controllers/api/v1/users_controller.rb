@@ -1,13 +1,12 @@
 class Api::V1::UsersController < ApplicationController
 
     def index 
-        role = (params[:role] ? params[:role] + "s" : "users" )
         users = User.where(is_deleted: false)
-        users = users.where("role = ?", (params[:role] == "admin" ? 0 : 1)) if params[:role]
-        users = users.where("name LIKE ?", "%" + User.sanitize_sql_like(params[:search]) + "%") if params[:search]
-        users = users.page(params[:page]).order("#{params[:sort_by]} #{params[:sort_order]}")
+        users = users.where("role = ?", User.roles[params["role"]]) if params["role"].present?
+        users = users.where("lower(name) LIKE ?", "%" + User.sanitize_sql_like(params["search"].downcase) + "%") if params["search"].present?
+        users = users.page(params["page"]).order("#{params["sort_by"]} #{params["sort_order"]}")
         
-        render json: users, root: role, meta: pagination_meta(users), adapter: :json
+        render json: users, root: (params["role"] or "users"), meta: pagination_meta(users), adapter: :json
     end
 
     def create
@@ -37,7 +36,7 @@ class Api::V1::UsersController < ApplicationController
             user[key] = value unless value.nil?
         end
         if user.save
-            render json: user, root: "admin"
+            render json: user, root: "admin", adapter: :json
         else 
             render json: user.errors.full_messages, status: :unprocessable_entity
         end
